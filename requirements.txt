@@ -2,7 +2,7 @@ beautifulsoup4
 datasketch
 faiss-cpu
 Flask
-langid
+textblob
 nltk
 pandas --only-binary :all:
 python-Levenshtein

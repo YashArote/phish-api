@@ -1,11 +1,10 @@
 import requests
 from bs4 import BeautifulSoup
 import tldextract
-from langdetect import detect, DetectorFactory
+from textblob import TextBlob
 from urllib.parse import urlparse
 import re
 
-DetectorFactory.seed = 0 
 
 class PhishingFeatureExtractor:
     FREE_HOSTS = [
@@ -97,6 +96,8 @@ class PhishingFeatureExtractor:
         form_ratio = num_forms / total_blocks
 
         return int(form_ratio >= form_threshold)
+    
+
     def is_language_suspicious(self):
         if not self.soup:
             return 0
@@ -111,13 +112,17 @@ class PhishingFeatureExtractor:
             if len(text) < 30:
                 return 0  # Not enough text to detect language
 
-            detected_lang = detect(text)
+            # Detect language using TextBlob
+            blob = TextBlob(text)
+            detected_lang = blob.detect_language()
 
             if detected_lang != 'en':
-                return 1
-            return 0
+                return 1  # Suspicious (non-English language detected)
+            return 0  # English language
+
         except Exception:
-            return 0  # In case of parsing or detection failure
+            return 0  # In case of any error, assume it's not suspicious
+    # In case of parsing or detection failure
 
     def is_right_click_disabled(self):
         if not self.soup:
