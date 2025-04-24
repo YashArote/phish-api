@@ -1,12 +1,8 @@
-beautifulsoup4
-datasketch
-faiss-cpu
-Flask
-langdetect
-nltk
+Flask==2.3.0
+langdetect==1.0.9
+nltk==3.5
+pandas==1.3.5
 pandas --only-binary :all:
-python-Levenshtein
-requests
-scikit-learn
-sentence-transformers
-tldextract
+python_Levenshtein==0.27.1
+Requests==2.32.3
+scikit_learn==1.3.1
