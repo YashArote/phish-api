@@ -2,7 +2,7 @@ beautifulsoup4
 datasketch
 faiss-cpu
 Flask
-langdetect==1.0.9
+langid
 nltk
 pandas --only-binary :all:
 python-Levenshtein
