@@ -5,6 +5,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from urllib.parse import urlparse
 import tldextract
 import nltk
+nltk.data.path.append('./nltk_data')
+
 from nltk.corpus import words
 
 english_words = set(words.words())

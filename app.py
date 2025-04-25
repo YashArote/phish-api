@@ -1,8 +1,6 @@
 from flask import Flask, jsonify, request
 from lex_sem import is_Similar
 from feature_test import is_Safe
-import nltk
-nltk.download('words')
 
 app = Flask(__name__)
 
