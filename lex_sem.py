@@ -1,5 +1,5 @@
 
-import pandas as pd
+import pandas as pd,pickle
 import numpy as np
 import faiss
 import os
@@ -8,7 +8,10 @@ from sentence_transformers import SentenceTransformer
 import sys
 from similarity_measure import combined_similarity
 
-
+df = pd.read_csv("majestic_thousands.csv", usecols=["Domain"], nrows=10000)
+df['Domain'] = df['Domain'].astype(str).fillna("")
+with open("cached_urls.pkl", "wb") as f:
+    pickle.dump(df['Domain'].tolist(), f)
 def shingler(url, k=3):
     """Generates k-shingles for a URL (removing 'www.') with float handling"""
     if isinstance(url, float):
@@ -73,11 +76,12 @@ LEXICAL_INDEX_PATH = "faiss_lexical.index"
 SEMANTIC_INDEX_PATH = "faiss_semantic.index"
 EMBEDDINGS_PATH = "semantic_embeddings.npy"
 DATASET_PATH = "majestic_thousands.csv"
-
+PICKLE_PATH = "cached_urls.pkl"
 num_perm = 128
 semantic_dim = 384
 top_k = 5
 
+'''@profile
 def load_dataset():
     """Load the first 10,000 URLs from CSV"""
     print("\n📊 Loading dataset...")
@@ -87,8 +91,24 @@ def load_dataset():
     urls = df['Domain'].tolist()
     print("Done loading")
     return urls
+'''
+def load_dataset():
+    if os.path.exists(PICKLE_PATH):
+        print("📦 Loading dataset from cache...")
+        with open(PICKLE_PATH, "rb") as f:
+            urls = pickle.load(f)
+    else:
+        print("📊 Loading dataset from CSV...")
+        df = pd.read_csv(DATASET_PATH, usecols=["Domain"], nrows=10000)
+        df['Domain'] = df['Domain'].astype(str).fillna("")
+        urls = df['Domain'].tolist()
+        
+        # Save to pickle for future runs
+        with open(PICKLE_PATH, "wb") as f:
+            pickle.dump(urls, f)
+        print("✅ Dataset cached for future use.")
 
-
+    return urls
 def build_lexical_index(urls):
     """Build and store lexical FAISS index with MinHash signatures"""
     print("\n⚙️ Building Lexical FAISS index with MinHash...")
@@ -115,7 +135,7 @@ def load_lexical_index(urls):
 
 
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
 
 def build_semantic_index(urls):
     """Build and store semantic FAISS index"""
@@ -160,7 +180,6 @@ else:
     semantic_index = load_semantic_index(urls)
 
 print(f"\n FAISS Indexing completed with {len(urls)} URLs")
-
 
 
 def search_url(target_url, top_k=1, lexical_weight=0.4, semantic_weight=0.4, seq_weight=0.2, lev_weight=0.4):
