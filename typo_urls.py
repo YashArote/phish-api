@@ -1,0 +1,23 @@
+popular_domains = [
+    "google", "facebook", "youtube", "twitter", "instagram",
+    "linkedin", "wikipedia", "amazon", "apple", "microsoft",
+    "paypal", "netflix", "spotify", "adobe", "whatsapp",
+    "tiktok", "snapchat", "reddit", "github", "zoom",
+    "dropbox", "office", "yahoo", "ebay", "bing",
+    "pinterest", "tumblr", "quora", "cnn", "bbc",
+    "nytimes", "icloud", "salesforce", "slack", "medium",
+    "wordpress", "airbnb", "booking", "expedia", "tripadvisor",
+    "uber", "lyft", "doordash", "grubhub", "shopify",
+    "walmart", "target", "costco", "bestbuy", "homedepot",
+    "lowes", "hulu", "vimeo", "soundcloud", "indeed",
+    "glassdoor", "intuit", "zillow", "yelp", "forbes",
+    "bloomberg", "cnbc", "foxnews", "nbc", "espn",
+    "capitalone", "bankofamerica", "chase", "wellsfargo", "americanexpress",
+    "citibank", "venmo", "coinbase", "binance", "kraken",
+    "bitfinex", "crypto", "openai", "cloudflare", "akamai",
+    "protonmail", "duckduckgo", "torproject", "zoom", "adp",
+    "tesla", "ford", "nike", "adidas", "puma",
+    "nintendo", "playstation", "xbox", "epicgames", "steamcommunity",
+    "twitch", "discord", "onlyfans", "patreon", "fiverr",
+    "upwork", "freelancer", "coursera", "udemy", "edx"
+]

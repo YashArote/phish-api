@@ -6,14 +6,13 @@ import os
 from datasketch import MinHash
 from sentence_transformers import SentenceTransformer
 import sys
-from similarity_measure import combined_similarity
+from similarity_measure import combined_similarity,check_fuzzy
 
 df = pd.read_csv("majestic_thousands.csv", usecols=["Domain"], nrows=10000)
 df['Domain'] = df['Domain'].astype(str).fillna("")
 with open("cached_urls.pkl", "wb") as f:
     pickle.dump(df['Domain'].tolist(), f)
 def shingler(url, k=3):
-    """Generates k-shingles for a URL (removing 'www.') with float handling"""
     if isinstance(url, float):
         return set()
 
@@ -26,7 +25,6 @@ def shingler(url, k=3):
 
 
 def get_minhash_signature(url, num_perm=128):
-    """Generates MinHash signature for the URL"""
     shingles = shingler(url)
     if not shingles:
         return np.zeros(num_perm, dtype=np.float32)
@@ -39,7 +37,6 @@ def get_minhash_signature(url, num_perm=128):
 
 
 def lev_dis(target, candidate):
-    """Levenshtein similarity with length penalty."""
     base_similarity = Levenshtein.ratio(target, candidate)
     m, n = len(target), len(candidate)
     length_penalty = abs(m - n) / max(m, n)
@@ -68,7 +65,7 @@ def sequential_similarity(target, candidate):
     length_penalty = abs(m - n) / max(m, n)
     score = max(base_similarity - length_penalty, 0)
 
-    print(f"🔹 Sequential similarity ({target} vs {candidate}): {score:.4f}")
+    print(f" Sequential similarity ({target} vs {candidate}): {score:.4f}")
     return round(score, 4)
 
 
@@ -81,37 +78,25 @@ num_perm = 128
 semantic_dim = 384
 top_k = 5
 
-'''@profile
-def load_dataset():
-    """Load the first 10,000 URLs from CSV"""
-    print("\n📊 Loading dataset...")
-    df = pd.read_csv(DATASET_PATH, usecols=["Domain"], nrows=10000)
-    df['Domain'] = df['Domain'].astype(str).fillna("")
-    
-    urls = df['Domain'].tolist()
-    print("Done loading")
-    return urls
-'''
+
 def load_dataset():
     if os.path.exists(PICKLE_PATH):
-        print("📦 Loading dataset from cache...")
+        print(" Loading dataset from cache...")
         with open(PICKLE_PATH, "rb") as f:
             urls = pickle.load(f)
     else:
-        print("📊 Loading dataset from CSV...")
+        print(" Loading dataset from CSV...")
         df = pd.read_csv(DATASET_PATH, usecols=["Domain"], nrows=10000)
         df['Domain'] = df['Domain'].astype(str).fillna("")
         urls = df['Domain'].tolist()
         
-        # Save to pickle for future runs
         with open(PICKLE_PATH, "wb") as f:
             pickle.dump(urls, f)
-        print("✅ Dataset cached for future use.")
+        print(" Dataset cached for future use.")
 
     return urls
 def build_lexical_index(urls):
-    """Build and store lexical FAISS index with MinHash signatures"""
-    print("\n⚙️ Building Lexical FAISS index with MinHash...")
+    print("\n Building Lexical FAISS index with MinHash...")
 
     lexical_signatures = np.array([get_minhash_signature(url, num_perm) for url in urls])
 
@@ -119,15 +104,14 @@ def build_lexical_index(urls):
     lexical_index.add(lexical_signatures)
 
     faiss.write_index(lexical_index, LEXICAL_INDEX_PATH)
-    print(f"✅ Lexical FAISS index saved at {LEXICAL_INDEX_PATH}")
+    print(f" Lexical FAISS index saved at {LEXICAL_INDEX_PATH}")
 
     return lexical_index
 
 
 def load_lexical_index(urls):
-    """Load or build lexical FAISS index"""
     if os.path.exists(LEXICAL_INDEX_PATH):
-        print("\n🔄 Loading existing Lexical FAISS index...")
+        print("\n Loading existing Lexical FAISS index")
         return faiss.read_index(LEXICAL_INDEX_PATH)
     else:
         return build_lexical_index(urls)
@@ -138,8 +122,7 @@ def load_lexical_index(urls):
 model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
 
 def build_semantic_index(urls):
-    """Build and store semantic FAISS index"""
-    print("\n⚙️ Building Semantic FAISS index...")
+    print("\n Building Semantic FAISS index")
 
     semantic_embeddings = model.encode(urls, convert_to_tensor=False)
 
@@ -155,9 +138,8 @@ def build_semantic_index(urls):
 
 
 def load_semantic_index(urls):
-    """Load or build semantic FAISS index"""
     if os.path.exists(SEMANTIC_INDEX_PATH) and os.path.exists(EMBEDDINGS_PATH):
-        print("\n🔄 Loading existing Semantic FAISS index...")
+        print("\n Loading existing Semantic FAISS index..")
         return faiss.read_index(SEMANTIC_INDEX_PATH)
     else:
         return build_semantic_index(urls)
@@ -183,15 +165,10 @@ print(f"\n FAISS Indexing completed with {len(urls)} URLs")
 
 
 def search_url(target_url, top_k=1, lexical_weight=0.4, semantic_weight=0.4, seq_weight=0.2, lev_weight=0.4):
-    """Search for similar URLs using combined lexical, semantic, and sequential similarity"""
 
-    print(f"\n🔎 Searching for: {target_url}")
-
-    # Lexical Matching (MinHash)
+    print(f"\n Searching for: {target_url}")
     lexical_signature = get_minhash_signature(target_url, num_perm).reshape(1, -1)
     lexical_distances, lexical_indices = lexical_index.search(lexical_signature, top_k)
-
-    # Semantic Matching
     semantic_embedding = model.encode([target_url], convert_to_tensor=False)
     semantic_distances, semantic_indices = semantic_index.search(semantic_embedding, top_k)
 
@@ -205,21 +182,8 @@ def search_url(target_url, top_k=1, lexical_weight=0.4, semantic_weight=0.4, seq
 
         lex_score = 1 / (1 + lexical_distances[0][i])
         sem_score = 1 / (1 + semantic_distances[0][i])
-
-        #seq_lex = sequential_similarity(target_url, lex_url)
-        #seq_sem = sequential_similarity(target_url, sem_url)
-        #lev_lex = lev_dis(target_url, lex_url)
-        #lev_sem = lev_dis(target_url, sem_url)
-
-        final_lex = (
-             lex_score
-            #(seq_weight * seq_lex) +
-            #(lev_weight * lev_lex)
-        )
-
-        final_sem = (
-            sem_score
-        )
+        final_lex =  lex_score
+        final_sem = sem_score
 
         results.append((lex_url, sem_url, final_lex, final_sem))
 
@@ -232,8 +196,11 @@ def search_url(target_url, top_k=1, lexical_weight=0.4, semantic_weight=0.4, seq
 
 def is_Similar(target_url):
     results=search_url(target_url,20)
+    fuzz_url=check_fuzzy(target_url)
+    if fuzz_url:
+        return fuzz_url
     for i, (l_url, s_url, score_lex, score_sem) in enumerate(results):
-        #print(f"{i+1}. {l_url}, {s_url}, Lex: {score_lex:.4f}, Sem: {score_sem:.4f}")
+        print(f"{i+1}. {l_url}, {s_url}, Lex: {score_lex:.4f}, Sem: {score_sem:.4f}")
         similarity_lex=combined_similarity(target_url,l_url)
         similarity__sem=combined_similarity(target_url,s_url)
         print("similarity lex",similarity_lex)

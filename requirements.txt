@@ -4,7 +4,7 @@ faiss-cpu
 Flask
 textblob
 nltk
-pandas --only-binary :all:
+pandas 
 python-Levenshtein
 requests
 scikit-learn

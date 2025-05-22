@@ -84,7 +84,6 @@ class PhishingFeatureExtractor:
 
         num_forms = len(self.soup.find_all('form'))
 
-        # Tags considered as content-bearing blocks
         content_tags = ['div', 'p', 'span', 'section', 'article', 'ul', 'ol', 'li', 'img', 'table', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
         non_form_blocks = sum(len(self.soup.find_all(tag)) for tag in content_tags)
 
@@ -103,26 +102,23 @@ class PhishingFeatureExtractor:
             return 0
 
         try:
-            # Extract visible text
             for script_or_style in self.soup(['script', 'style']):
                 script_or_style.decompose()
             text = self.soup.body.get_text(separator=' ', strip=True)
-            text = ' '.join(text.split())  # Normalize whitespace
+            text = ' '.join(text.split())  
 
             if len(text) < 30:
-                return 0  # Not enough text to detect language
+                return 0  
 
-            # Detect language using TextBlob
             blob = TextBlob(text)
             detected_lang = blob.detect_language()
 
             if detected_lang != 'en':
-                return 1  # Suspicious (non-English language detected)
-            return 0  # English language
+                return 1  
+            return 0  
 
         except Exception:
             return 0  # In case of any error, assume it's not suspicious
-    # In case of parsing or detection failure
 
     def is_right_click_disabled(self):
         if not self.soup:
@@ -233,14 +229,12 @@ class PhishingFeatureExtractor:
         parsed = urlparse(self.url)
         domain = parsed.netloc.lower()
 
-        # Extract title and header-related divs
         soup = self.soup
         if not soup:
             return 0
         
         title_text = soup.title.string.lower() if soup.title and soup.title.string else ""
 
-        # Gather header-like divs
         header_texts = []
         for tag in soup.find_all(True, {"id": True, "class": True}):
             id_class = (tag.get("id", "") + " " + " ".join(tag.get("class", []))).lower()
@@ -249,7 +243,6 @@ class PhishingFeatureExtractor:
 
         combined_text = title_text + " " + " ".join(header_texts)
 
-        # Look for popular site names
         for site in popular_sites:
             if site in combined_text and site not in domain:
                 return 1
@@ -293,8 +286,9 @@ def is_Safe(url):
     scores= extractor.calculate_phishing_score()
     print("scores",scores)
     total_score=sum(scores)
+    positions=[1,7]
     print(total_score)
-    if total_score>=2:
+    if total_score>=2 or any(scores[i]!=0 for i in positions):
         triggered_warnings = [msg for flag, msg in zip(scores, warnings) if flag]
         print(triggered_warnings)
         return triggered_warnings

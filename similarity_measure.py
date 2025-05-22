@@ -6,17 +6,20 @@ from urllib.parse import urlparse
 import tldextract
 import nltk
 nltk.data.path.append('./nltk_data')
-
+from typo_urls import popular_domains
+from fuzzywuzzy import fuzz
 from nltk.corpus import words
 
 english_words = set(words.words())
 
-def extract_domain(url):
-    ext = tldextract.extract(url)
-    
-    if ext.domain and ext.suffix:
-        return f"{ext.domain}.{ext.suffix}"
-    return url  # fallback
+def check_match(word, url_list):
+    for url in url_list:
+        similarity = fuzz.ratio(word, url)
+        if similarity == 100:
+            return "no"
+        elif 80 < similarity < 100:
+            return "true"
+    return "false"
 
 def remove_tld(domain_or_url: str) -> str:
     extracted = tldextract.extract(domain_or_url)
@@ -95,14 +98,23 @@ def start_end_similarity(main1, main2, length=5):
 
     return (start_score + end_score) / 2
 
-
-def combined_similarity(url1, url2, w1=0.2, w2=0.6, w3=0.2):
+def check_fuzzy(word):
+    word = remove_tld(word)
+    print("checking fuzzy",word)
+    for url in popular_domains:
+        similarity = fuzz.ratio(word, url)
+        if similarity == 100:
+            return None
+        elif 80 < similarity < 100:
+            return url
+    return None
+def combined_similarity(url1, url2,lex=False, w1=0.2, w2=0.6, w3=0.2):
     print("url is: ",url1)
     print("url is: ",url2)
     
     url1 = remove_tld(url1)
     url2 = remove_tld(url2)
- 
+    
     jac_sim = jaccard_similarity(url1, url2)
     lev_sim = levenshtein_similarity(url1, url2)
     #cos_sim = cosine_tfidf_similarity(url1, url2)
@@ -119,8 +131,6 @@ def combined_similarity(url1, url2, w1=0.2, w2=0.6, w3=0.2):
     print(f" Domain Match Similarity (Not Included in Score): {dom_sim:.4f}")
     print(f" Start-End Similarity: {se_sim:.4f}")
     print(f" Combined Similarity Score: {combined_score:.4f}")
-    print("url is: ",url1)
-    print("url is: ",url2)
     if dom_sim==1:
         return "no"
     if combined_score>=0.8 or dom_sim==2:
